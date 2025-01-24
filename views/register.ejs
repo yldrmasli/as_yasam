@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+</head>
+<body>
+    <form action="/auth/register" method="POST">
+        <input type="number" name="bayi_id" placeholder="Bayi ID" required>
+        <input type="number" name="role_id" placeholder="Role ID" required>
+        <input type="text" name="ad" placeholder="Ad" required>
+        <input type="text" name="soyad" placeholder="Soyad" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="sifre" placeholder="Şifre" required>
+        <button type="submit">Kaydol</button>
+    </form>
+    <% if (error) { %>
+        <p style="color: red;"><%= error %></p>
+    <% } %>
+</body>
+</html>

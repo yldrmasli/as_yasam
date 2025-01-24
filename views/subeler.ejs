@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Şubeler</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Dancing+Script:wght@400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Rubik:ital,wght@1,500&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Leaflet CSS -->
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <img src="/images/logo.jpeg" alt="Logo" />
+        <span>Yaşama Değer Katan Güven ve Rahatlık</span>
+      </div>
+      <nav class="nav">
+        <ul>
+          <li><a href="/" class="active">Anasayfa</a></li>
+          <li><a href="/subeler">Şubeler</a></li>
+          <li><a href="/analizler">Analizler</a></li>
+          <li><a href="/grafikler">Grafikler</a></li>
+        </ul>
+      </nav>
+      <div class="profile">
+        <img src="/images/ppfoto.jpg" alt="User" />
+        <button class="logout-button" onclick="logout()">Çıkış Yap</button>
+      </div>
+    </header>
+    <main class="main">
+      <div class="content">
+        <div class="layout">
+          <!-- Form alanı -->
+          <div class="form-container">
+            <h3>Veri Seçimi</h3>
+            <form id="bayiForm">
+              <label for="ay">Ay Seçin:</label>
+              <input type="date" id="ay" name="ay" required />
+
+              <label for="bayi_id">Bayi ID:</label>
+              <input type="number" id="bayi_id" name="bayi_id" required />
+
+              <button type="submit">Verileri Getir</button>
+            </form>
+          </div>
+
+          <!-- Dinamik Tablo -->
+          <div class="info-container">
+            <h2>Şube Verileri</h2>
+            <table id="subeler-table" class="table">
+              <thead>
+                <tr>
+                  <th>Bayi ID</th>
+                  <th>Ay</th>
+                  <th>Ay Müşteri Sayısı</th>
+                  <th>Ay Kazanç</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Dinamik veriler buraya gelecek -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("bayiForm");
+        const tableBody = document.querySelector("#subeler-table tbody");
+
+        if (!tableBody) {
+          console.error("Tablo gövdesi bulunamadı! ID'yi kontrol edin.");
+          return;
+        }
+
+        // API'den veri çeken fonksiyon
+        const fetchBayiData = async (ay, bayi_id) => {
+          try {
+            const response = await fetch("/subeler/veriler", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ay, bayi_id }),
+            });
+
+            const data = await response.json();
+            tableBody.innerHTML = ""; // Tabloyu temizle
+
+            if (response.ok) {
+              if (data.length === 0) {
+                const row = document.createElement("tr");
+                row.innerHTML =
+                  '<td colspan="4">Kritere uygun veri bulunamadı.</td>';
+                tableBody.appendChild(row);
+                return;
+              }
+
+              data.forEach((veri) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                  <td>${veri.bayi_id}</td>
+                  <td>${veri.ay}</td>
+                  <td>${veri.ay_musteri_sayi}</td>
+                  <td>${veri.ay_kazanc}</td>
+                `;
+                tableBody.appendChild(row);
+              });
+            } else {
+              alert(data.error || "Veri alınırken bir hata oluştu.");
+            }
+          } catch (err) {
+            console.error("Veriler alınamadı:", err);
+            alert("Bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+          }
+        };
+
+        // Form gönderildiğinde çalışır
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const ay = document.getElementById("ay").value;
+          const bayi_id = document.getElementById("bayi_id").value;
+
+          if (!ay || !bayi_id) {
+            alert("Lütfen ay ve bayi ID bilgilerini girin.");
+            return;
+          }
+
+          fetchBayiData(ay, bayi_id);
+        });
+      });
+      function logout() {
+        fetch("/auth/logout", { method: "POST" })
+          .then((response) => {
+            if (response.ok) {
+              window.location.href = "/login";
+            } else {
+              alert("Çıkış yaparken bir hata oluştu.");
+            }
+          })
+          .catch((err) => console.error("Logout error:", err));
+      }
+    </script>
+     
+  </body>
+</html>

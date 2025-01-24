@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>As Yaşam</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Dancing+Script:wght@400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Rubik:ital,wght@1,500&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <img src="/images/logo.jpeg" alt="Logo" />
+        <span>Yaşama Değer Katan Güven ve Rahatlık</span>
+      </div>
+      <nav class="nav">
+        <ul>
+          <li><a href="/" class="active">Anasayfa</a></li>
+          <li><a href="/subeler">Şubeler</a></li>
+          <li><a href="/analizler">Analizler</a></li>
+          <li><a href="/grafikler">Grafikler</a></li>
+        </ul>
+      </nav>
+      <div class="profile">
+        <img src="/images/ppfoto.jpg" alt="User" />
+        <button class="logout-button" onclick="logout()">Çıkış Yap</button>
+
+          
+      </div>
+    </header>
+    <main class="main">
+      <div class="left">
+        <div class="stats">
+          <div class="stat1">
+            <h3>Toplam Kazanç</h3>
+            <p id="toplam-kazanc">Yükleniyor...</p>
+          </div>
+          <div class="stat2">
+            <h3>Toplam Müşteri Sayısı</h3>
+            <p id="toplam-musteri">Yükleniyor...</p>
+          </div>
+          <div class="stat3">
+            <h3>Toplam Bayiler</h3>
+            <p id="toplam-bayiler">Yükleniyor...</p>
+          </div>
+        </div>
+        <div class="map-container">
+          <div id="map" style="height: 400px; width: 100%"></div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nüfus</th>
+                <th>Yaşlı Nüfus</th>
+                <th>Yaşlı Oranı</th>
+                <th>Gelişmişlik Kademe</th>
+                <th>Gelişmişlik Skoru</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="nufus">Yükleniyor...</td>
+                <td id="yasli-nufus">Yükleniyor...</td>
+                <td id="yasli-orani">Yükleniyor...</td>
+                <td id="gelismislik-kademe">Yükleniyor...</td>
+                <td id="gelismislik-skor">Yükleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="additional-info">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Huzurevi Sayısı</th>
+                <th>Hastane Sayısı</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="huzurevi-sayisi">Yükleniyor...</td>
+                <td id="hastane-sayisi">Yükleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="bayiler" class="bayiler-container"></div>
+      </div>
+    </main>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Dashboard verilerini çek ve DOM'a yaz
+        fetch("/api/dashboard")
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById("toplam-kazanc").textContent =
+              data.toplamKazanc;
+            document.getElementById("toplam-musteri").textContent =
+              data.toplamMusteriSayisi;
+            document.getElementById("toplam-bayiler").textContent =
+              data.toplamBayiler;
+          })
+          .catch((err) => console.error("Dashboard verileri alınamadı:", err));
+
+        // Leaflet.js haritasını oluştur
+        const map = L.map("map").setView([38.4192, 27.1287], 9); // İzmir koordinatları
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        // İzmir ilçeleri ve koordinatları
+        const locations = [
+          { name: "Aliağa", coords: [38.7997, 27.0586] },
+          { name: "Balçova", coords: [38.38, 27.0435] },
+          { name: "Bayındır", coords: [38.2278, 27.6478] },
+          { name: "Bayraklı", coords: [38.4672, 27.123] },
+          { name: "Bergama", coords: [39.123, 27.177] },
+          { name: "Beydağ", coords: [38.085, 28.2117] },
+          { name: "Bornova", coords: [38.462, 27.2202] },
+          { name: "Buca", coords: [38.4189, 27.1403] },
+          { name: "Çeşme", coords: [38.3242, 26.305] },
+          { name: "Çiğli", coords: [38.4948, 27.0562] },
+          { name: "Dikili", coords: [39.074, 26.8914] },
+          { name: "Foça", coords: [38.6672, 26.7437] },
+          { name: "Gaziemir", coords: [38.3222, 27.1373] },
+          { name: "Güzelbahçe", coords: [38.3662, 26.9262] },
+          { name: "Karabağlar", coords: [38.3782, 27.0976] },
+          { name: "Karaburun", coords: [38.6366, 26.5103] },
+          { name: "Karşıyaka", coords: [38.4585, 27.1086] },
+          { name: "Kemalpaşa", coords: [38.4266, 27.5375] },
+          { name: "Kınık", coords: [39.0875, 27.3927] },
+          { name: "Kiraz", coords: [38.2302, 28.2065] },
+          { name: "Konak", coords: [38.4192, 27.1287] },
+          { name: "Menderes", coords: [38.2462, 27.1345] },
+          { name: "Menemen", coords: [38.6075, 27.0663] },
+          { name: "Narlıdere", coords: [38.3725, 27.0127] },
+          { name: "Ödemiş", coords: [38.2277, 27.9696] },
+          { name: "Seferihisar", coords: [38.1966, 26.8395] },
+          { name: "Selçuk", coords: [37.9516, 27.367] },
+          { name: "Tire", coords: [38.0893, 27.7292] },
+          { name: "Torbalı", coords: [38.1502, 27.3625] },
+          { name: "Urla", coords: [38.3222, 26.7643] },
+        ];
+
+        // Tüm ilçeleri haritaya işaretle ve tıklama olayını bağla
+        locations.forEach((location) => {
+          L.marker(location.coords)
+            .addTo(map)
+            .bindPopup(`<b>${location.name}</b>`)
+            .on("click", () => {
+              fetch(`/api/ilce/${location.name}`)
+                .then((response) => response.json())
+                .then((data) => {
+                  // Sağdaki tabloyu güncelle
+                  document.getElementById("nufus").textContent =
+                    data.nufus || "Veri yok";
+                  document.getElementById("yasli-nufus").textContent =
+                    data.yasli_nufus || "Veri yok";
+                  document.getElementById("yasli-orani").textContent =
+                    data.yasli_orani || "Veri yok";
+                  document.getElementById("gelismislik-kademe").textContent =
+                    data.gelismislik_kademe || "Veri yok";
+                  document.getElementById("gelismislik-skor").textContent =
+                    data.gelismislik_skor || "Veri yok";
+                  document.getElementById("huzurevi-sayisi").textContent =
+                    data.huzurevi_sayisi || "Veri yok";
+                  document.getElementById("hastane-sayisi").textContent =
+                    data.hastane_sayisi || "Veri yok";
+                })
+                .catch((err) => console.error("Veriler alınamadı:", err));
+            });
+        });
+      });
+
+      function logout() {
+        fetch("/auth/logout", { method: "POST" })
+          .then((response) => {
+            if (response.ok) {
+              window.location.href = "/login";
+            } else {
+              alert("Çıkış yaparken bir hata oluştu.");
+            }
+          })
+          .catch((err) => console.error("Logout error:", err));
+      }
+    </script>
+  </body>
+</html>

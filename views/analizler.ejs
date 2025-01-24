@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AHP Süreci</title>
+    <link rel="stylesheet" href="/css/analizler.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <img src="/images/logo.jpeg" alt="Logo" />
+        <span>Yaşama Değer Katan Güven ve Rahatlık</span>
+      </div>
+      <nav class="nav">
+        <ul>
+          <li><a href="/" class="active">Anasayfa</a></li>
+          <li><a href="/subeler">Şubeler</a></li>
+          <li><a href="/analizler">Analizler</a></li>
+          <li><a href="/grafikler">Grafikler</a></li>
+        </ul>
+      </nav>
+      <div class="profile">
+        <img src="/images/ppfoto.jpg" alt="User" />
+        <button class="logout-button" onclick="logout()">Çıkış Yap</button>
+      </div>
+    </header>
+    <main class="analiz-container">
+      <div class="criteria-section">
+        <h3>Kriterler ve Ağırlıklar</h3>
+        <form id="weight-form">
+          <table>
+            <thead>
+              <tr>
+                <th>Kriter</th>
+                <th>Ağırlık (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Yaşlı Nüfus</td>
+                <td>
+                  <input type="number" name="yasli_nufus" placeholder="%" />
+                </td>
+              </tr>
+              <tr>
+                <td>Yaşlı Oranı</td>
+                <td>
+                  <input type="number" name="yasli_orani" placeholder="%" />
+                </td>
+              </tr>
+              <tr>
+                <td>Gelişmişlik Skoru</td>
+                <td>
+                  <input
+                    type="number"
+                    name="gelismislik_skor"
+                    placeholder="%"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td>Huzurevi Sayısı</td>
+                <td>
+                  <input type="number" name="huzurevi_sayisi" placeholder="%" />
+                </td>
+              </tr>
+              <tr>
+                <td>Hastane Sayısı</td>
+                <td>
+                  <input type="number" name="hastane_sayisi" placeholder="%" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button type="button" id="analyze-button">Getir</button>
+        </form>
+        <!-- Grafik Alanı -->
+        <canvas id="scoreChart" width="400" height="200"></canvas>
+      </div>
+
+      <div class="results-section">
+        <h3>Sonuç</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>İlçe Adı</th>
+              <th>Yaşlı Nüfus</th>
+              <th>Yaşlı Oranı</th>
+              <th>Gelişmişlik Skoru</th>
+              <th>Huzurevi Sayısı</th>
+              <th>Hastane Sayısı</th>
+              <th>Skor</th>
+            </tr>
+          </thead>
+          <tbody id="results-table">
+            <!-- Dinamik sonuçlar buraya eklenecek -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </body>
+  <script>
+    const weightInputs = document.querySelectorAll('input[type="number"]');
+    const calculateTotal = () => {
+      let total = 0;
+      weightInputs.forEach((input) => {
+        total += parseFloat(input.value || 0);
+      });
+      return total;
+    };
+
+    const handleAnalyze = () => {
+      const total = calculateTotal();
+      if (total !== 100) {
+        alert(`Ağırlıkların toplamı 100 olmalıdır! Şu anki toplam: ${total}`);
+        return;
+      }
+      const weights = {
+        yasli_nufus:
+          document.querySelector('input[name="yasli_nufus"]').value || 0,
+        yasli_orani:
+          document.querySelector('input[name="yasli_orani"]').value || 0,
+        gelismislik_skor:
+          document.querySelector('input[name="gelismislik_skor"]').value || 0,
+        huzurevi_sayisi:
+          document.querySelector('input[name="huzurevi_sayisi"]').value || 0,
+        hastane_sayisi:
+          document.querySelector('input[name="hastane_sayisi"]').value || 0,
+      };
+
+      fetch("/analizler/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(weights),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          // Tablo Güncellemesi
+          const resultsTable = document.getElementById("results-table");
+          resultsTable.innerHTML = "";
+          data.ilceler.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${row.ilce_isim}</td>
+              <td>${row.yasli_nufus}</td>
+              <td>${row.yasli_orani}</td>
+              <td>${row.gelismislik_skor}</td>
+              <td>${row.huzurevi_sayisi}</td>
+              <td>${row.hastane_sayisi}</td>
+              <td>${row.ahp_skor}</td>
+            `;
+            resultsTable.appendChild(tr);
+          });
+
+          // Grafik Güncellemesi
+          updateChart(data.ilceler);
+        })
+        .catch((err) => console.error("Hata:", err));
+    };
+
+    let scoreChart;
+
+    const updateChart = (ilceler) => {
+      const ctx = document.getElementById("scoreChart").getContext("2d");
+      const labels = ilceler.map((ilce) => ilce.ilce_isim || "Bilinmiyor");
+      const scores = ilceler.map((ilce) => ilce.ahp_skor || 0);
+
+      // Eğer scoreChart bir Chart nesnesiyse yok et
+      if (scoreChart instanceof Chart) {
+        scoreChart.destroy();
+      }
+
+      // Yeni grafik oluştur
+      scoreChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "AHP Skorları",
+              data: scores,
+              backgroundColor: "rgba(75, 192, 192, 0.2)",
+              borderColor: "rgba(75, 192, 192, 1)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    };
+
+    document
+      .getElementById("analyze-button")
+      .addEventListener("click", handleAnalyze);
+
+      function logout() {
+        fetch("/auth/logout", { method: "POST" })
+          .then((response) => {
+            if (response.ok) {
+              window.location.href = "/login";
+            } else {
+              alert("Çıkış yaparken bir hata oluştu.");
+            }
+          })
+          .catch((err) => console.error("Logout error:", err));
+      }
+  </script>
+</html>
